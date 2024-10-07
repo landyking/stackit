@@ -13,6 +13,7 @@ pg = st.navigation({
         st.Page("component_update.py",title="Component - Update"),
         st.Page("component_remove.py",title="Component - Remove"),
         st.Page("configuration_new.py",title="Configuration - New"),
+        st.Page("configuration_update.py",title="Configuration - Update"),
     ],
     "Debug":[
         st.Page("api_results.py",title="API Test")

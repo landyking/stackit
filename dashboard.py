@@ -63,13 +63,3 @@ while filtered_stacks:
         stack = filtered_stacks.pop(0)
         with cols[i].container(border=True):
             single_stack(stack)
-# for stack in filtered_stacks:
-#     with st.container(border=True):
-#         st.subheader(f":red[{stack['id']}]" if stack['state'] != 'StackConsistency' else f"{stack['id']}")
-#         st.markdown(f"**name**: `{stack['name']}`, **cluster_name**: `{stack['cluster_name']}`, **namespace**: `{stack['namespace']}`, **state**: `{stack['state']}`")
-
-#         all_comps: list = stack.get('components',[])
-#         all_comps = sorted(all_comps,key=lambda it:it.get('name'))
-#         anno_list = [(it['name'],'','lightgreen' if it.get('healthy') else 'orange') for it in all_comps]
-#         anno_list = [it for idx,one in enumerate(anno_list) for it in ([' ',one] if idx!= 0 else [one])]
-#         annotated_text(anno_list)

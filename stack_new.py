@@ -25,7 +25,7 @@ spec = {}
 
 ids = api.get_stack_ids()
 with st.expander(label="Existing Stacks",expanded=True):
-    st.markdown(f"`{"`, `".join(ids)}`")
+    st.markdown(", ".join([f"`{it}`" for it in ids]))
 
 col_left,col_right = st.columns(2)
 

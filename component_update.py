@@ -27,11 +27,13 @@ if not selected_component:
     st.error(f"No component in stack: {selected_stack_id}")
     st.stop()
 
-st.divider()
+st.info("The `configurations` property is hided in this page.")
+# st.divider()
 
 current_component = selected_component.copy()
 
 origin_name = current_component.pop("name")
+origin_configurations = current_component.pop("configurations",[])
 origin_instance_count = current_component.pop("instance_count")
 origin_image = current_component.pop("image")
 origin_image_version = current_component.pop("image_version")
@@ -82,7 +84,10 @@ with col_right:
     if st.button("Update",use_container_width=True,type="primary"):
         full_spec = {
             **stack_spec,
-            "components":[spec]
+            "components":[{
+                **spec,
+                "configurations": origin_configurations
+            }]
         }
         utils.confirm_dialog(message=f"Do you want to update component: {origin_name} in stack: {selected_stack_id}?",
                              yes_func=lambda: handle_update_component(spec=full_spec,name=origin_name,stack_id=selected_stack_id))

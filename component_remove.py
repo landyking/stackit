@@ -32,7 +32,7 @@ download_data = json.dumps(selected_component,indent=4)
 
 left,right = st.columns(2)
 
-if left.button(label="Remove Stack",disabled=not same,type="primary",use_container_width=True):
+if left.button(label="Remove Component",disabled=not same,type="primary",use_container_width=True):
     utils.confirm_dialog(message=f"Do you want to remove component: {input_component} in stack: {selected_stack}",
                          yes_func=lambda: handle_remove_component(stack_id=selected_stack,component_name=input_component))
 timestamp = datetime.now().strftime("%Y%m%d%H%M%S")

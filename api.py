@@ -1,10 +1,14 @@
 import streamlit as st
 import requests
 import json
+from datetime import datetime
+import os
 
-base_url = "http://localhost:38080"
+base_url = os.getenv("STACKIT_BASE_URL",default="http://localhost:38080")
 
-@st.cache_data
+print(f"using base_url: {base_url}")
+
+@st.cache_data(ttl=30)
 def get_stacks() -> list[dict]:
     resp = requests.get(f"{base_url}/v1/stacks")
     if resp.status_code == 200:
@@ -13,17 +17,18 @@ def get_stacks() -> list[dict]:
     else:
         raise RuntimeError(resp.status_code,resp.text)
 
-@st.cache_data
+@st.cache_data(ttl=30)
 def get_stack_ids() -> list[str]:
     resp = requests.get(f"{base_url}/v1/stacks/ids")
     if resp.status_code == 200:
         # st.toast("fetch stacks successful!")
-        return resp.json()
+        return sorted(resp.json())
     else:
         raise RuntimeError(resp.status_code,resp.text)
 
 @st.cache_data(ttl=30)
 def get_stack(stack_id) -> dict:
+    print(f"loading stack: {stack_id}")
     resp = requests.get(f"{base_url}/v1/stacks/{stack_id}")
     if resp.status_code == 200:
         # st.toast("fetch stacks successful!")
@@ -31,7 +36,7 @@ def get_stack(stack_id) -> dict:
     else:
         raise RuntimeError(resp.status_code,resp.text)
     
-@st.cache_data
+@st.cache_data(ttl=30)
 def get_clusterconfigs() -> list[dict]:
     resp = requests.get(f"{base_url}/v1/clusterconfigs")
     if resp.status_code == 200:
@@ -40,11 +45,14 @@ def get_clusterconfigs() -> list[dict]:
     else:
         raise RuntimeError(resp.status_code,resp.text)
 
-def clear_cache_for_stacks(only_component_change = False):
+def clear_cache_for_stacks(only_component_change: bool = False,stack_id: str = None):
     get_stacks.clear()
     if not only_component_change:
         get_stack_ids.clear()
-    get_stack.clear()
+    if stack_id:
+        get_stack.clear(stack_id)
+    else:
+        get_stack.clear()
 
 def create_stack(spec):
     resp = requests.post(f"{base_url}/v1/stacks",json=spec)
@@ -54,7 +62,6 @@ def create_stack(spec):
     else:
         raise RuntimeError(resp.status_code,resp.text)
 
-# delete_stack('kingtest-gpu-controlplane')
 def delete_stack(stack_id):
     resp = requests.delete(f"{base_url}/v1/stacks/{stack_id}")
     if resp.status_code in range(200,300):
@@ -87,6 +94,17 @@ def apply_components(stack_id:str,spec:dict,name_list:list[dict],message:str):
     })
     if resp.status_code == 200:
         print(f"apply stack: {stack_id}, components: {','.join(name_list)} successful")
+        clear_cache_for_stacks(only_component_change=True)
+    else:
+        raise RuntimeError(resp.status_code,resp.text)
+    
+def apply_configurations(stack_id: str,component_name: str,configurations: list[dict]):
+    resp = requests.put(f"{base_url}/v1/stacks/{stack_id}/components/{component_name}/configs",json={
+        "configs": configurations,
+        "message": f"update configurations {datetime.now().strftime("%Y%m%d%H%M%S")}"
+    })
+    if resp.status_code in range(200,300):
+        print(f"update configuration for component: {component_name} in stack: {stack_id} successful")
         clear_cache_for_stacks(only_component_change=True)
     else:
         raise RuntimeError(resp.status_code,resp.text)

@@ -47,8 +47,8 @@ with col_right:
     stack_spec:dict = api.get_stack(selected_stack_id).pop("spec")
     stack_spec_comps = stack_spec.pop("components",[])
     with st.expander(label="Existing Components",expanded=True):
-        tmp = "`,`".join([it['name'] for it in stack_spec_comps])
-        st.markdown(f"`{tmp}`" if tmp else "No components." )
+        tmp = ", ".join([f"`{it['name']}`" for it in stack_spec_comps])
+        st.markdown(f"{tmp}" if tmp else "No components." )
     
     col1,col2 = st.columns(2)
     comp_name = col1.text_input(label="Name")
@@ -85,12 +85,12 @@ with col_right:
         "type":comp_type
     })
     
-    if st.button("Submit",use_container_width=True):
+    if st.button("Submit",use_container_width=True,type="primary"):
         full_spec = {
             **stack_spec,
             "components":[spec]
         }
-        utils.confirm_dialog(message="Do you really want submit these data?",
+        utils.confirm_dialog(message=f"Do you want to create component: {comp_name} in stack: {selected_stack_id} ?",
                              yes_func=lambda: handle_create_component(spec=full_spec,name=comp_name,stack_id=selected_stack_id))
 with col_left:
     st.subheader("Component Spec YAML Preview:")
