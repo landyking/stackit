@@ -7,7 +7,11 @@ import utils
 
 def handle_create_component(spec,name,stack_id):
     api.create_component(stack_id=stack_id,spec=spec,name_list=[name])
+    st.session_state['component_create_success'] = True
     st.rerun()
+
+if st.session_state.pop("component_create_success",False):
+    st.success("Create component successful!")
 
 stack_ids = api.get_stack_ids()
 options_stacks = stack_ids

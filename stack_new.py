@@ -6,7 +6,11 @@ import utils
 
 def handle_create_stack(spec):
     api.create_stack(spec)
+    st.session_state['stack_create_success'] = True
     st.rerun()
+
+if st.session_state.pop("stack_create_success",False):
+    st.success("Create stack successful!")
     
 
 clusterconfigs = api.get_clusterconfigs()
