@@ -1,65 +1,127 @@
 import requests
 import streamlit as st
 import api
+import plotly.express as px
 import pandas as pd
 from annotated_text import annotated_text
+import duckdb
+from datetime import datetime,timezone,timedelta
 
-stacks_data = api.get_stacks()
+selected_auto_refresh = st.sidebar.checkbox(label="Auto Refresh",value=True)
+@st.fragment(run_every="10s" if selected_auto_refresh else None)
+def main_fragment():
+    result_stacks = api.get_stacks()
+    # st.dataframe(pd.json_normalize(result_stacks))
 
-all_stack_specs = [{
-        "id":it["spec"]['id'],
-        "name": it["spec"]['name'],
-        "cluster_name":it["spec"]['cluster_name'],
-        "namespace": it["spec"]['namespace'],
-        **it['stack_status']
-    } for it in stacks_data]
-all_stack_clusters = set([it['cluster_name'] for it in all_stack_specs])
+    tmp_stacks = [ {
+        **{
+            k:v for (k,v) in stack.get('spec',{}).items()
+        },
+        **{
+            k:v for (k,v) in stack.get('stack_status',{}).items() if k not in ['event',"components"]
+        },
+        "last_modified": max([comp["last_modified"] for comp in stack.get('stack_status',{}).get('components',[])])
+    } for stack in result_stacks]
+
+    tz_est8 = timezone(timedelta(hours=8))
+    all_stacks = pd.DataFrame([
+        {
+            **stack,
+            "components":[it['name'] for it in stack.get('components',[])],
+            "last_modified_str": pd.to_datetime(stack['last_modified']).astimezone(tz_est8).strftime("%y-%m-%d %H:%M:%S")
+        }
+        for stack in tmp_stacks
+    ])
+
+    all_stacks = all_stacks.sort_values(by="id").sort_values(by="state",ascending=False)
+
+    # st.dataframe(all_stacks)
+
+    all_component_spec =pd.DataFrame([ {
+        "stack_id": stack['id'],
+        **{key: value for (key,value) in comp.items()}
+        }
+        for stack in result_stacks 
+        for comp in stack.get('spec',{}).get('components',[])
+    ])
+    # st.dataframe(all_component_spec)
+
+    all_component_status =pd.DataFrame([ {
+        "stack_id": stack['id'],
+        **{key: value for (key,value) in comp.items()}
+        }
+        for stack in result_stacks 
+        for comp in stack.get('stack_status',{}).get('components',[])
+    ])
+    # st.dataframe(all_component_status)
+
+    result_clusters =  api.get_clusterconfigs()
+    result_sshtunnels = api.get_sshtunnels()
+
+    col1,col2,col3,col4 = st.columns([1,1,2,2],vertical_alignment="center")
+
+    with col1:
+        st.container(border=True).metric(label="Cluster Count",value=len(result_clusters))
+        st.container(border=True).metric(label="SSH Tunnel Count",value=len(result_sshtunnels))
+    with col2:
+        st.container(border=True).metric(label="Stack Count",value=len(result_stacks))
+        st.container(border=True).metric(label="Component Count",value=len(all_component_spec))
+
+    pie_data_stack_status = duckdb.sql("select state as 状态, count(*) as 数量 from all_stacks group by state").df()
+    with col3:
+        fig = px.pie(
+            pie_data_stack_status,
+            names='状态',
+            values='数量',
+            title="Status of Stacks",
+            # hole=0.3,  # 设置中间洞的大小，形成环形图。去掉此参数即可显示传统饼图
+            # color_discrete_sequence=px.colors.qualitative.Set3  # 设置颜色序列
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    pie_data_component_status = duckdb.sql("""
+        select condition as 状态, count(*) as 数量 from (
+            select sp.stack_id,sp.name,sp.enable,st.healthy,
+            case
+                when sp.enable = 'true' and st.healthy = 'true' then 'normal'
+                when sp.enable = 'true' and st.healthy != 'true' then 'abnormal'
+                else 'disabled'
+            end as condition 
+            from all_component_spec sp 
+            left join all_component_status st on sp.stack_id = st.stack_id and sp.name = st.name
+        ) group by condition""").df()
+    with col4:
+        fig = px.pie(
+            pie_data_component_status,
+            names='状态',
+            values='数量',
+            title="Status of Components",
+            # hole=0.3,  # 设置中间洞的大小，形成环形图。去掉此参数即可显示传统饼图
+            # color_discrete_sequence=px.colors.qualitative.Set3  # 设置颜色序列
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
 
-clusters =["all"] + list(all_stack_clusters)
+    color_mapping = {
+        'StackConsistency': 'color: green',
+        'StackReconciling': 'color: red',
+    }
+    def highlight_status(val):
+        # print(type(val),val)
+        return color_mapping.get(val, '')
 
-with st.sidebar:
-    selected_cluster = st.selectbox(label="Cluster",options=clusters)
-    namespaces = ["all"] + list(set([it['namespace'] for it in all_stack_specs if selected_cluster == 'all' or it['cluster_name'] == selected_cluster]))
-    selected_namespace = st.selectbox(label="Namespace",options=namespaces)
-    stacks = ["all"] + [it['id'] for it in all_stack_specs if (selected_cluster == 'all' or it['cluster_name'] == selected_cluster) and (selected_namespace == 'all' or it['namespace'] == selected_namespace)]
-    selected_stack = st.selectbox(label="Stack",options=stacks)
-    states = ["all"] + list(set([it['state'] for it in all_stack_specs]))
-    selected_state = st.selectbox(label="State",options=states)
-    search_id = st.text_input(label="ID").strip()
-    if st.button(label="Force Reload",use_container_width=True,type="primary"):
-        api.get_stacks.clear()
+    st.dataframe(
+        data=all_stacks.style.map(highlight_status,subset=['state']),
+        hide_index=True,
+        column_order=("id","state","last_modified_str","components","actions"),
+        column_config={
+            "id":st.column_config.Column(label="ID"),
+            "state":st.column_config.Column("State"),
+            "last_modified_str":st.column_config.Column(label="Last Modified"),
+            "components":st.column_config.ListColumn(label="Components"),
+        #  "actions":st.column_config.Column(label="Actions",format=)
+        },
+        use_container_width=True
+    )
 
-filtered_stacks = all_stack_specs
-if selected_cluster != 'all':
-    filtered_stacks = [it for it in filtered_stacks if it['cluster_name'] == selected_cluster]
-if selected_namespace != 'all':
-    filtered_stacks = [it for it in filtered_stacks if it['namespace'] == selected_namespace]
-if selected_stack != 'all':
-    filtered_stacks = [it for it in filtered_stacks if it['id'] == selected_stack]
-if search_id != '':
-    filtered_stacks = [it for it in filtered_stacks if search_id in it['id']]
-
-# st.write(f"Cluster: {selected_cluster}, Stack: {selected_stack}, size: {len(filtered_stacks)}")
-filtered_stacks = sorted(filtered_stacks,key=lambda it:it.get('id'))
-filtered_stacks = sorted(filtered_stacks,key=lambda it:it.get('state')=='StackConsistency')
-
-def single_stack(stack: dict):
-    st.subheader(f":red[{stack['id']}]" if stack['state'] != 'StackConsistency' else f"{stack['id']}")
-    st.markdown(f"**name**: `{stack['name']}`, **cluster_name**: `{stack['cluster_name']}`, **namespace**: `{stack['namespace']}`, **state**: `{stack['state']}`")
-
-    all_comps: list = stack.get('components',[])
-    all_comps = sorted(all_comps,key=lambda it:it.get('name'))
-    all_comps = sorted(all_comps,key=lambda it:it.get('healthy'))
-    anno_list = [(it['name'],'','rgb(9, 171, 59)' if it.get('healthy') else 'orange') for it in all_comps]
-    anno_list = [it for idx,one in enumerate(anno_list) for it in ([' ',one] if idx!= 0 else [one])]
-    annotated_text(anno_list)
-    
-while filtered_stacks:
-    cols = st.columns(3)
-    for i in range(3):
-        if not filtered_stacks:
-            break
-        stack = filtered_stacks.pop(0)
-        with cols[i].container(border=True):
-            single_stack(stack)
+main_fragment()

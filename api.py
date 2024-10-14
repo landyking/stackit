@@ -4,11 +4,12 @@ import json
 from datetime import datetime
 import os
 
+cache_ttl = 10
 base_url = os.getenv("STACKIT_BASE_URL",default="http://localhost:38080")
 
 print(f"using base_url: {base_url}")
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=cache_ttl)
 def get_stacks() -> list[dict]:
     resp = requests.get(f"{base_url}/v1/stacks")
     if resp.status_code == 200:
@@ -17,7 +18,7 @@ def get_stacks() -> list[dict]:
     else:
         raise RuntimeError(resp.status_code,resp.text)
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=cache_ttl)
 def get_stack_ids() -> list[str]:
     resp = requests.get(f"{base_url}/v1/stacks/ids")
     if resp.status_code == 200:
@@ -26,7 +27,7 @@ def get_stack_ids() -> list[str]:
     else:
         raise RuntimeError(resp.status_code,resp.text)
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=cache_ttl)
 def get_stack(stack_id) -> dict:
     print(f"loading stack: {stack_id}")
     resp = requests.get(f"{base_url}/v1/stacks/{stack_id}")
@@ -36,9 +37,34 @@ def get_stack(stack_id) -> dict:
     else:
         raise RuntimeError(resp.status_code,resp.text)
     
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=cache_ttl)
 def get_clusterconfigs() -> list[dict]:
     resp = requests.get(f"{base_url}/v1/clusterconfigs")
+    if resp.status_code == 200:
+        # st.toast("fetch stacks successful!")
+        return resp.json()
+    else:
+        raise RuntimeError(resp.status_code,resp.text)
+@st.cache_data(ttl=cache_ttl)
+def get_sshtunnels() -> list[dict]:
+    resp = requests.get(f"{base_url}/v1/sshtunnels")
+    if resp.status_code == 200:
+        # st.toast("fetch stacks successful!")
+        return resp.json()
+    else:
+        raise RuntimeError(resp.status_code,resp.text)
+@st.cache_data(ttl=cache_ttl)
+def get_stack_versions(stack_id:str) -> dict:
+    resp = requests.get(f"{base_url}/v1/stacks/{stack_id}/versions")
+    if resp.status_code == 200:
+        # st.toast("fetch stacks successful!")
+        return resp.json()
+    else:
+        raise RuntimeError(resp.status_code,resp.text)
+    
+@st.cache_data(ttl=cache_ttl)
+def get_stack_events(stack_id:str) -> dict:
+    resp = requests.get(f"{base_url}/v1/stacks/{stack_id}/events")
     if resp.status_code == 200:
         # st.toast("fetch stacks successful!")
         return resp.json()

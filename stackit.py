@@ -4,6 +4,7 @@ st.set_page_config(layout="wide")
 pg = st.navigation({
     "Home":[
         st.Page("dashboard.py",title="Dashboard",default=True),
+        st.Page("stacks.py",title="Stacks"),
     ],
     "Manage":[
         st.Page("cluster_new.py",title="Cluster - New"),
@@ -19,4 +20,7 @@ pg = st.navigation({
         st.Page("api_results.py",title="API Test")
     ]
 })
+
+st.session_state['search_stack_id'] = st.session_state.get('search_stack_id',"")
+
 pg.run()
