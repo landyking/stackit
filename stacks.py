@@ -2,64 +2,127 @@ import requests
 import streamlit as st
 import api
 import pandas as pd
+import utils
 from annotated_text import annotated_text
 
-stacks_data = api.get_stacks()
-
-all_stack_specs = [{
-        "id":it["spec"]['id'],
-        "name": it["spec"]['name'],
-        "cluster_name":it["spec"]['cluster_name'],
-        "namespace": it["spec"]['namespace'],
-        **it['stack_status']
-    } for it in stacks_data]
-all_stack_clusters = set([it['cluster_name'] for it in all_stack_specs])
-
-
-clusters =["all"] + list(all_stack_clusters)
-
+stack_ids = api.get_stack_ids()
+if not stack_ids:
+    st.error("no available stacks.")
+    st.stop()
 with st.sidebar:
-    selected_cluster = st.selectbox(label="Cluster",options=clusters)
-    namespaces = ["all"] + list(set([it['namespace'] for it in all_stack_specs if selected_cluster == 'all' or it['cluster_name'] == selected_cluster]))
-    selected_namespace = st.selectbox(label="Namespace",options=namespaces)
-    stacks = ["all"] + [it['id'] for it in all_stack_specs if (selected_cluster == 'all' or it['cluster_name'] == selected_cluster) and (selected_namespace == 'all' or it['namespace'] == selected_namespace)]
-    selected_stack = st.selectbox(label="Stack",options=stacks)
-    states = ["all"] + list(set([it['state'] for it in all_stack_specs]))
-    selected_state = st.selectbox(label="State",options=states)
-    search_id = st.text_input(label="ID",key="search_stack_id").strip()
-    if st.button(label="Force Reload",use_container_width=True,type="primary"):
-        api.get_stacks.clear()
+    if st.session_state['search_stack_id'] not in stack_ids:
+        utils.correct_state(name='search_stack_id',value=stack_ids[0],sync_query_param=True)
+    selected_stack_id = st.selectbox(label="Stack",options=stack_ids,key="search_stack_id")
 
-filtered_stacks = all_stack_specs
-if selected_cluster != 'all':
-    filtered_stacks = [it for it in filtered_stacks if it['cluster_name'] == selected_cluster]
-if selected_namespace != 'all':
-    filtered_stacks = [it for it in filtered_stacks if it['namespace'] == selected_namespace]
-if selected_stack != 'all':
-    filtered_stacks = [it for it in filtered_stacks if it['id'] == selected_stack]
-if search_id != '':
-    filtered_stacks = [it for it in filtered_stacks if search_id in it['id']]
+selected_auto_refresh = st.sidebar.checkbox(label="Auto Refresh",value=True)
 
-# st.write(f"Cluster: {selected_cluster}, Stack: {selected_stack}, size: {len(filtered_stacks)}")
-filtered_stacks = sorted(filtered_stacks,key=lambda it:it.get('id'))
-filtered_stacks = sorted(filtered_stacks,key=lambda it:it.get('state')=='StackConsistency')
+@st.fragment(run_every="10s" if selected_auto_refresh else None)
+def main_fragment():
 
-def single_stack(stack: dict):
-    st.subheader(f":red[{stack['id']}]" if stack['state'] != 'StackConsistency' else f"{stack['id']}")
-    st.markdown(f"**name**: `{stack['name']}`, **cluster_name**: `{stack['cluster_name']}`, **namespace**: `{stack['namespace']}`, **state**: `{stack['state']}`")
+    result_stack = api.get_stack(stack_id=selected_stack_id)
+    # st.json(result_stack,expanded=1)
 
-    all_comps: list = stack.get('components',[])
-    all_comps = sorted(all_comps,key=lambda it:it.get('name'))
-    all_comps = sorted(all_comps,key=lambda it:it.get('healthy'))
-    anno_list = [(it['name'],'','rgb(9, 171, 59)' if it.get('healthy') else 'orange') for it in all_comps]
-    anno_list = [it for idx,one in enumerate(anno_list) for it in ([' ',one] if idx!= 0 else [one])]
-    annotated_text(anno_list)
-    
-while filtered_stacks:
-    cols = st.columns(3)
-    for i in range(3):
-        if not filtered_stacks:
-            break
-        stack = filtered_stacks.pop(0)
-        with cols[i].container(border=True):
-            single_stack(stack)
+    stack_id = result_stack['id']
+    stack_status = result_stack.get('stack_status',{})
+    state =  stack_status.get('state','')
+    version = stack_status.get('version','')
+    last_modified =  max([comp["last_modified"] for comp in stack_status.get('components',[])])
+    update_spec_message = stack_status.get('update_spec_message','')
+    error = stack_status.get('error',False)
+    cause = stack_status.get('cause','')
+    color = 'green' if state=="StackConsistency" else 'red'
+    st.markdown(f"#### :{color}-background[{stack_id}]  :{color}[{state}]")
+    text_list = [("version",version,"#eee")," ",("last_modified",last_modified,"#eee")]
+    if update_spec_message:
+        text_list.append(" ")
+        text_list.append(("update_spec_message",update_spec_message,"#eee"))
+    if error:
+        text_list.append(" ")
+        text_list.append(("error",f'{error}',"#eee"))
+    if cause:
+        text_list.append(" ")
+        text_list.append(("cause",cause,"#eee"))
+
+    annotated_text(text_list)
+        
+    st.divider()
+
+    spec_comps: list[dict] = result_stack.get('spec',{}).get('components',[])
+    stat_comps: list[dict] = result_stack.get('stack_status',{}).get('components',[])
+
+    full_comps: list[dict] = [
+        {
+            **spc,
+            **next(stc for stc in stat_comps if stc.get('name') == spc.get('name'))
+        }
+        for spc in spec_comps
+    ]
+    total = 0
+    healthy = 0
+    unhealthy = 0
+    disabled = 0
+    for comp in full_comps:
+        total+=1
+        if not comp.get('enable',False):
+            disabled+=1
+            comp['state'] = 'disabled'
+            comp['color'] = 'gray'
+        elif comp.get('healthy',False):
+            healthy+=1
+            comp['state'] = 'healthy'
+            comp['color'] = 'green'
+        else:
+            unhealthy+=1
+            comp['state'] = 'unhealthy'
+            comp['color'] = 'red'
+
+    full_comps.sort(key=lambda it:it.get('last_modified'),reverse=True)
+    full_comps.sort(key=lambda it:{"disabled":3,"unhealthy":1,"healthy":2}.get(it['state']))
+
+    st.markdown(f"###### Components: {total} :green-background[healthy: {healthy}] :red-background[unhealthy: {unhealthy}] :gray-background[disabled: {disabled}]")
+
+    col_size = 3
+    while full_comps:
+        cols = st.columns(col_size)
+        for col in range(col_size):
+            if not full_comps:
+                break
+            comp = full_comps.pop(0)
+            with cols[col].expander(label=f":{comp['color']}-background[{comp['name']}] - :{comp['color']}[{comp['state']}]"):
+                # st.markdown(f"###### :{comp['color']}-background[{comp['name']}] - :{comp['color']}[{comp['state']}]")
+                annotated_text(('last modified',comp['last_modified'],"#fff"),
+                                " ",("image",comp['image'],"#fff"),
+                                " ",("image version",comp['image_version'],"#fff"),
+                                " ",("instance count",f"{comp['instance_count']}","#fff"),
+                                " ",("enable",f"{comp.get('enable',False)}","#fff"),
+                                " ",("healthy",f"{comp.get('healthy',False)}","#fff"),)
+
+    st.divider()
+
+    result_versions = api.get_stack_versions(selected_stack_id)
+    versions = result_versions.get('versions',[])
+    pd_versions = pd.DataFrame(versions)
+    pd_versions['time'] = pd.to_datetime(pd_versions['time'])
+    st.markdown("###### Version History")
+    st.dataframe(pd_versions.head(100),column_order=("time","version","message"),
+                hide_index=True,
+                use_container_width=True)
+
+    st.divider()
+
+    event_data = stack_status.get('event',[])
+    pd_event = pd.DataFrame(event_data)
+    pd_event['timestamp'] = pd.to_datetime(pd_event['timestamp'])
+    # st.dataframe(pd_event,use_container_width=True)
+    # with st.container(border=False):
+    st.markdown("###### Event History")
+    st.scatter_chart(
+        pd_event.head(100),
+        x="timestamp",
+        y="type",
+        color="subject",
+        # size="col3",
+        use_container_width=True
+    )
+
+main_fragment()

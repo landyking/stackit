@@ -27,13 +27,12 @@ def main_fragment():
     all_stacks = pd.DataFrame([
         {
             **stack,
-            "components":[it['name'] for it in stack.get('components',[])],
-            "last_modified_str": pd.to_datetime(stack['last_modified']).astimezone(tz_est8).strftime("%y-%m-%d %H:%M:%S")
+            "last_modified_str": pd.to_datetime(stack['last_modified']).astimezone(tz_est8).strftime("%y-%m-%d %H:%M:%S"),
         }
         for stack in tmp_stacks
     ])
 
-    all_stacks = all_stacks.sort_values(by="id").sort_values(by="state",ascending=False)
+    all_stacks = all_stacks.sort_values(by="last_modified_str",ascending=False).sort_values(by="state",ascending=False)
 
     # st.dataframe(all_stacks)
 
@@ -67,6 +66,8 @@ def main_fragment():
         st.container(border=True).metric(label="Stack Count",value=len(result_stacks))
         st.container(border=True).metric(label="Component Count",value=len(all_component_spec))
 
+    config = {'displayModeBar': False}
+
     pie_data_stack_status = duckdb.sql("select state as 状态, count(*) as 数量 from all_stacks group by state").df()
     with col3:
         fig = px.pie(
@@ -77,7 +78,7 @@ def main_fragment():
             # hole=0.3,  # 设置中间洞的大小，形成环形图。去掉此参数即可显示传统饼图
             # color_discrete_sequence=px.colors.qualitative.Set3  # 设置颜色序列
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, config=config, use_container_width=True)
 
     pie_data_component_status = duckdb.sql("""
         select condition as 状态, count(*) as 数量 from (
@@ -99,29 +100,24 @@ def main_fragment():
             # hole=0.3,  # 设置中间洞的大小，形成环形图。去掉此参数即可显示传统饼图
             # color_discrete_sequence=px.colors.qualitative.Set3  # 设置颜色序列
         )
-        st.plotly_chart(fig, use_container_width=True)
-
-
-    color_mapping = {
-        'StackConsistency': 'color: green',
-        'StackReconciling': 'color: red',
-    }
-    def highlight_status(val):
-        # print(type(val),val)
-        return color_mapping.get(val, '')
-
-    st.dataframe(
-        data=all_stacks.style.map(highlight_status,subset=['state']),
-        hide_index=True,
-        column_order=("id","state","last_modified_str","components","actions"),
-        column_config={
-            "id":st.column_config.Column(label="ID"),
-            "state":st.column_config.Column("State"),
-            "last_modified_str":st.column_config.Column(label="Last Modified"),
-            "components":st.column_config.ListColumn(label="Components"),
-        #  "actions":st.column_config.Column(label="Actions",format=)
-        },
-        use_container_width=True
-    )
+        st.plotly_chart(fig, config=config, use_container_width=True)
+    stack_list = all_stacks.to_dict(orient="records")
+    while stack_list:
+        cols = st.columns(3)
+        for i in range(3):
+            if not stack_list:
+                break
+            stack = stack_list.pop(0)
+            with cols[i].container(border=True):
+                state = stack['state']
+                color = "green" if state == 'StackConsistency' else 'red'
+                st.markdown(f"##### :{color}[{stack['id']}]")
+                st.markdown(f" **State**: :{color}[{stack['state']}]")
+                st.markdown(f" **Last Modified**: `{stack['last_modified_str']}`")
+                comps_md =" ".join([f"`{it['name']}`" for it in stack['components']])
+                st.markdown(f" **Components**: {comps_md}")
+                if st.button(label="View",type="secondary",use_container_width=True,key=f"comp_btn_{stack['id']}"):
+                    st.session_state['search_stack_id'] = stack['id']
+                    st.switch_page("stacks.py")
 
 main_fragment()

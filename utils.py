@@ -22,3 +22,24 @@ def get_language_by_filename(filename: str):
     if filename.endswith('.xml'):
         return "xml"
     return "plain_text"
+
+def keep_state(name: str, sync_query_param: bool = False):
+    old_value = st.session_state.get(name, None)
+    if old_value != None:
+        st.session_state[name] = old_value
+    elif sync_query_param:
+        st.session_state[name] = st.query_params.get(name,None)
+    else:
+        st.session_state[name] = None
+
+    if sync_query_param:
+        st.query_params[name] = st.session_state[name]
+
+def correct_state(name: str,value, sync_query_param: bool = False):
+    st.session_state[name] = value
+    if sync_query_param:
+        st.query_params[name] = st.session_state[name]
+
+def local_css(file_name):
+    with open(file_name) as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)

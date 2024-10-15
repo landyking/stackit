@@ -1,4 +1,5 @@
 import streamlit as st
+import utils
 
 st.set_page_config(layout="wide")
 pg = st.navigation({
@@ -21,6 +22,8 @@ pg = st.navigation({
     ]
 })
 
-st.session_state['search_stack_id'] = st.session_state.get('search_stack_id',"")
+utils.local_css("style.css")
+
+utils.keep_state("search_stack_id",True)
 
 pg.run()
