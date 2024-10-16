@@ -20,7 +20,8 @@ def main_fragment():
         **{
             k:v for (k,v) in stack.get('stack_status',{}).items() if k not in ['event',"components"]
         },
-        "last_modified": max([comp["last_modified"] for comp in stack.get('stack_status',{}).get('components',[])])
+        "last_modified": max([comp["last_modified"] for comp in stack.get('stack_status',{}).get('components',[])],
+                             default=stack.get('stack_status',{}).get('last_modified',None))
     } for stack in result_stacks]
 
     tz_est8 = timezone(timedelta(hours=8))
@@ -109,12 +110,16 @@ def main_fragment():
                 break
             stack = stack_list.pop(0)
             with cols[i].container(border=True):
+                # st.json(stack,expanded=1)
                 state = stack['state']
+                components = stack.get('components',[])
+                if type(components) is not list:
+                    components = []
                 color = "green" if state == 'StackConsistency' else 'red'
                 st.markdown(f"##### :{color}[{stack['id']}]")
                 st.markdown(f" **State**: :{color}[{stack['state']}]")
                 st.markdown(f" **Last Modified**: `{stack['last_modified_str']}`")
-                comps_md =" ".join([f"`{it['name']}`" for it in stack['components']])
+                comps_md =" ".join([f"`{it['name']}`" for it in components])
                 st.markdown(f" **Components**: {comps_md}")
                 if st.button(label="View",type="secondary",use_container_width=True,key=f"comp_btn_{stack['id']}"):
                     st.session_state['search_stack_id'] = stack['id']

@@ -8,14 +8,10 @@ pg = st.navigation({
         st.Page("stacks.py",title="Stacks"),
     ],
     "Manage":[
-        st.Page("cluster_new.py",title="Cluster - New"),
-        st.Page("stack_new.py",title="Stack - New"),
-        st.Page("stack_remove.py",title="Stack - Remove"),
-        st.Page("component_new.py",title="Component - New"),
-        st.Page("component_update.py",title="Component - Update"),
-        st.Page("component_remove.py",title="Component - Remove"),
-        st.Page("configuration_new.py",title="Configuration - New"),
-        st.Page("configuration_update.py",title="Configuration - Update"),
+        # st.Page("cluster_new.py",title="Cluster - New"),
+        st.Page("manage_stacks.py",title="Stacks"),
+        st.Page("manage_components.py",title="Components"),
+        st.Page("manage_configurations.py",title="Configurations"),
     ],
     "Debug":[
         st.Page("api_results.py",title="API Test")
@@ -25,5 +21,6 @@ pg = st.navigation({
 utils.local_css("style.css")
 
 utils.keep_state("search_stack_id",True)
+utils.keep_state("search_component_name",True)
 
 pg.run()
