@@ -11,3 +11,5 @@ def stack_view():
    for stack in result_stacks:
       with st.expander(label=stack.get('id')):
          st.json(stack,expanded=2)
+   if not result_stacks:
+      st.info("No Data")

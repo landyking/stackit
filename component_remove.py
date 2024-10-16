@@ -30,7 +30,7 @@ def component_remove(stack_id: str):
 
     def format_comp_with_img(name: str):
         it: dict = next(it for it in all_components if it['name'] == name)
-        return f"{it['name']} ({it['image']}:{it['image_version']})"
+        return f"{it['name']} ({it['image']}:{it.get('image_version','latest')})"
 
     selected_component_name: str = st.selectbox(label="Component",options=options_comp,format_func=format_comp_with_img,key="search_component_name")
 

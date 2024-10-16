@@ -66,8 +66,8 @@ def part_single_component(comp: dict):
     with st.expander(label=f":{comp['color']}-background[{comp['name']}] - :{comp['color']}[{comp['state']}]"):
         # st.markdown(f"###### :{comp['color']}-background[{comp['name']}] - :{comp['color']}[{comp['state']}]")
         annotated_text(('last modified',comp['last_modified'],"#fff"),
-                        " ",("image",comp['image'],"#fff"),
-                        " ",("image version",comp['image_version'],"#fff"),
+                        " ",("image",comp.get('image',''),"#fff"),
+                        " ",("image version",comp.get('image_version',''),"#fff"),
                         " ",("instance count",f"{comp['instance_count']}","#fff"),
                         " ",("enable",f"{comp.get('enable',False)}","#fff"),
                         " ",("healthy",f"{comp.get('healthy',False)}","#fff"),)
@@ -151,11 +151,11 @@ def main_fragment():
 
     part_components(result_stack=result_stack)
 
-    st.divider()
+    # st.divider()
 
     part_version_history(result_stack=result_stack)
 
-    st.divider()
+    # st.divider()
 
     part_event_history(result_stack=result_stack)
 

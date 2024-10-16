@@ -1,4 +1,5 @@
 import streamlit as st
+from sqlalchemy.sql import text
 
 @st.dialog("Confirm")
 def confirm_dialog(message: str,yes_func:callable = st.rerun,no_func: callable = st.rerun):
@@ -43,3 +44,27 @@ def correct_state(name: str,value, sync_query_param: bool = False):
 def local_css(file_name):
     with open(file_name) as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
+def initial_db():
+    conn = st.connection('stackit_db', type='sql')
+    with conn.session as s:
+        rst = s.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='t_settings'")).first()
+        if not rst[0]:
+            print(f"start to initial database")
+            s.execute(text("CREATE TABLE IF NOT EXISTS t_settings (name TEXT UNIQUE NOT NULL, value TEXT NOT NULL);"))
+            s.commit()
+        
+@st.cache_data
+def load_settings() -> dict:
+    conn = st.connection('stackit_db', type='sql')
+    settings = conn.query('select * from t_settings',ttl=0)
+    rst = settings.to_dict("records")
+    return {it['name']:it['value'] for it in rst}
+
+def save_settings(settings: dict):
+    conn = st.connection('stackit_db', type='sql')
+    with conn.session as s:
+        for k,v in settings.items():
+            s.execute(text("INSERT or REPLACE INTO t_settings (name, value) VALUES (:name, :value)"),{"name":k,"value":v})
+        s.commit()
+    load_settings.clear()

@@ -10,3 +10,5 @@ def component_view(stack_id: str):
    for comp in components:
       with st.expander(label=comp.get('name')):
          st.json(comp,expanded=1)
+   if not components:
+      st.info("No Data")

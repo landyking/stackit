@@ -42,10 +42,10 @@ def component_update(stack_id: str):
 
         origin_name = current_component.pop("name")
         origin_configurations = current_component.pop("configurations",[])
-        origin_instance_count = current_component.pop("instance_count")
-        origin_image = current_component.pop("image")
-        origin_image_version = current_component.pop("image_version")
-        origin_type = current_component.pop("type")
+        origin_instance_count = current_component.pop("instance_count",'')
+        origin_image = current_component.pop("image",'')
+        origin_image_version = current_component.pop("image_version",'')
+        origin_type = current_component.pop("type",'')
         origin_enable = current_component.pop("enable",False)
 
         default_properties = json.dumps(current_component,indent=4)

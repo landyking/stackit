@@ -5,6 +5,7 @@ import plotly.express as px
 import pandas as pd
 from annotated_text import annotated_text
 import duckdb
+import json
 from datetime import datetime,timezone,timedelta
 
 selected_auto_refresh = st.sidebar.checkbox(label="Auto Refresh",value=True)
@@ -28,6 +29,9 @@ def main_fragment():
     all_stacks = pd.DataFrame([
         {
             **stack,
+            "name_fmt":f"{"🚨" if stack['state'] != 'StackConsistency' else ''}{stack['id']}",
+            "state_fmt":f"{"🟥" if stack['state'] != 'StackConsistency' else '🟩'}{stack['state']}",
+            "components_names": [it['name'] for it in stack['components']],
             "last_modified_str": pd.to_datetime(stack['last_modified']).astimezone(tz_est8).strftime("%y-%m-%d %H:%M:%S"),
         }
         for stack in tmp_stacks
@@ -102,27 +106,46 @@ def main_fragment():
             # color_discrete_sequence=px.colors.qualitative.Set3  # 设置颜色序列
         )
         st.plotly_chart(fig, config=config, use_container_width=True)
-    stack_list = all_stacks.to_dict(orient="records")
-    while stack_list:
-        cols = st.columns(3)
-        for i in range(3):
-            if not stack_list:
-                break
-            stack = stack_list.pop(0)
-            with cols[i].container(border=True):
-                # st.json(stack,expanded=1)
-                state = stack['state']
-                components = stack.get('components',[])
-                if type(components) is not list:
-                    components = []
-                color = "green" if state == 'StackConsistency' else 'red'
-                st.markdown(f"##### :{color}[{stack['id']}]")
-                st.markdown(f" **State**: :{color}[{stack['state']}]")
-                st.markdown(f" **Last Modified**: `{stack['last_modified_str']}`")
-                comps_md =" ".join([f"`{it['name']}`" for it in components])
-                st.markdown(f" **Components**: {comps_md}")
-                if st.button(label="View",type="secondary",use_container_width=True,key=f"comp_btn_{stack['id']}"):
-                    st.session_state['search_stack_id'] = stack['id']
-                    st.switch_page("stacks.py")
+
+    df = st.dataframe(all_stacks,
+                 column_config={
+                     "name_fmt":'ID',
+                     "state_fmt":"State",
+                     "last_modified_str":'Last Modified',
+                     "components_names": "Components"
+                 },
+                 hide_index=True,
+                 on_select="rerun",
+                 selection_mode="single-row",
+                 column_order=("name_fmt","state_fmt","last_modified_str","components_names"),
+                 use_container_width=True)
+    # st.json(df)
+    if df.selection.rows:
+        select_row_idx= df.selection.rows[0]
+        select_row = all_stacks.iloc[select_row_idx]
+        st.session_state['search_stack_id'] = select_row.get('id')
+        st.switch_page("stacks.py")
+    # stack_list = all_stacks.to_dict(orient="records")
+    # while stack_list:
+    #     cols = st.columns(3)
+    #     for i in range(3):
+    #         if not stack_list:
+    #             break
+    #         stack = stack_list.pop(0)
+    #         with cols[i].container(border=True):
+    #             # st.json(stack,expanded=1)
+    #             state = stack['state']
+    #             components = stack.get('components',[])
+    #             if type(components) is not list:
+    #                 components = []
+    #             color = "green" if state == 'StackConsistency' else 'red'
+    #             st.markdown(f"##### :{color}[{stack['id']}]")
+    #             st.markdown(f" **State**: :{color}[{stack['state']}]")
+    #             st.markdown(f" **Last Modified**: `{stack['last_modified_str']}`")
+    #             comps_md =" ".join([f"`{it['name']}`" for it in components])
+    #             st.markdown(f" **Components**: {comps_md}")
+    #             if st.button(label="View",type="secondary",use_container_width=True,key=f"comp_btn_{stack['id']}"):
+    #                 st.session_state['search_stack_id'] = stack['id']
+    #                 st.switch_page("stacks.py")
 
 main_fragment()
