@@ -37,7 +37,7 @@ if settings.get('address'):
 else:
     pg = st.navigation({
         "Setting":[
-            st.Page("setting.py",title="Setting",default=True),
+            st.Page("endpoint.py",title="Endpoint",default=True),
         ]
     })
     pg.run()
