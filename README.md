@@ -7,7 +7,7 @@ pip3 freeze > requirements.txt
 
 #### build docker image
 ```shell
-docker build -t stackit .
+docker build -t landykingdom/stackit .
 ```
 
 #### run docker image
