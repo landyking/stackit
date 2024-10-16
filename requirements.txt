@@ -1,4 +1,5 @@
 altair==5.4.1
+appnope==0.1.4
 asttokens==2.4.1
 attrs==24.2.0
 backcall==0.2.0
@@ -31,6 +32,7 @@ markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 matplotlib-inline==0.1.7
 mdurl==0.1.2
+mistune==3.0.2
 more-itertools==10.5.0
 narwhals==1.8.4
 nbclient==0.10.0
@@ -53,6 +55,7 @@ pure_eval==0.2.3
 pyarrow==17.0.0
 pydeck==0.9.1
 Pygments==2.18.0
+python-dateutil==2.9.0.post0
 pytz==2024.2
 pyzmq==26.2.0
 referencing==0.35.1
@@ -61,6 +64,7 @@ rich==13.8.1
 rpds-py==0.20.0
 six==1.16.0
 smmap==5.0.1
+soupsieve==2.6
 SQLAlchemy==2.0.27
 st-annotated-text==4.0.1
 stack-data==0.6.3
@@ -72,6 +76,7 @@ toml==0.10.2
 tornado==6.4.1
 traitlets==5.14.3
 typing_extensions==4.12.2
+tzdata==2024.2
 urllib3==2.2.3
 watchdog==5.0.3
 wcwidth==0.2.13
