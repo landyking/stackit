@@ -26,7 +26,7 @@ def get_request_params():
     need_auth: bool = settings.get('need_auth','0') == '1'
     user = settings.get('user','')
     password = settings.get('password','')
-    headers = {}
+    headers = {"Content-Type": "application/json"}
     if need_auth:
         base64_credentials = generate_basic_auth_header(username=user,password=password)
         headers["Authorization"]=f"Basic {base64_credentials}"
@@ -124,6 +124,18 @@ def delete_stack(stack_id):
     resp = requests.delete(f"{base_url}/v1/stacks/{stack_id}",headers=headers)
     if resp.status_code in range(200,300):
         print(f"delete stack[{stack_id}] successful!")
+        clear_cache_for_stacks()
+    else:
+        clear_cache_for_stacks()
+        raise RuntimeError(resp.status_code,resp.text)
+    
+def revert_stack(stack_id: str,version: str):
+    base_url,headers = get_request_params()
+    url = f"{base_url}/v1/stacks/{stack_id}/versions/{version}"
+    print(f"url: {url}")
+    resp = requests.put(url,headers=headers)
+    if resp.status_code in range(200,300):
+        print(f"revert stack[{stack_id}] with version[{version}] successful!")
         clear_cache_for_stacks()
     else:
         clear_cache_for_stacks()

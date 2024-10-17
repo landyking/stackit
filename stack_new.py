@@ -57,7 +57,7 @@ def stack_new():
             "namespace": input_namespace
         })
         
-        if st.button("Submit",use_container_width=True):
+        if st.button("Submit",type="primary", use_container_width=True):
             utils.confirm_dialog(message="Do you really want submit these data?",yes_func=lambda :handle_create_stack(spec))
     with col_left:
         st.markdown("###### Stack Spec Preview:")

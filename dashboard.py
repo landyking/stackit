@@ -31,7 +31,7 @@ def main_fragment():
             **stack,
             "name_fmt":f"{"🚨" if stack['state'] != 'StackConsistency' else ''}{stack['id']}",
             "state_fmt":f"{"🟥" if stack['state'] != 'StackConsistency' else '🟩'}{stack['state']}",
-            "components_names": [it['name'] for it in stack['components']],
+            "components_names": [it['name'] for it in stack.get('components',[])],
             "last_modified_str": pd.to_datetime(stack['last_modified']).astimezone(tz_est8).strftime("%y-%m-%d %H:%M:%S"),
         }
         for stack in tmp_stacks

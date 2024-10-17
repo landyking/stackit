@@ -5,6 +5,13 @@ st.set_page_config(layout="wide")
 
 utils.initial_db()
 settings = utils.load_settings()
+debug_menu = {}
+if st.query_params.get('__debug','') == 'stackit':
+    debug_menu={
+        "Debug":[
+            st.Page("api_results.py",title="API Test")
+        ]
+    }
 if settings.get('address'):
     pg = st.navigation({
         "Home":[
@@ -21,9 +28,7 @@ if settings.get('address'):
         "Setting":[
             st.Page("endpoint.py",title="Endpoint"),
         ],
-        # "Debug":[
-        #     st.Page("api_results.py",title="API Test")
-        # ]
+        **debug_menu
     })
 
     utils.local_css("style.css")
