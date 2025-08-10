@@ -74,20 +74,20 @@ def main_fragment():
 
     config = {'displayModeBar': False}
 
-    pie_data_stack_status = duckdb.sql("select state as 状态, count(*) as 数量 from all_stacks group by state").df()
+    pie_data_stack_status = duckdb.sql("select state as Status, count(*) as Count from all_stacks group by state").df()
     with col3:
         fig = px.pie(
             pie_data_stack_status,
-            names='状态',
-            values='数量',
+            names='Status',
+            values='Count',
             title="Status of Stacks",
-            # hole=0.3,  # 设置中间洞的大小，形成环形图。去掉此参数即可显示传统饼图
-            # color_discrete_sequence=px.colors.qualitative.Set3  # 设置颜色序列
+            # hole=0.3,  # Sets the size of the middle hole to create a donut chart. Remove this parameter to display a traditional pie chart
+            # color_discrete_sequence=px.colors.qualitative.Set3  # Set color sequence
         )
         st.plotly_chart(fig, config=config, use_container_width=True)
 
     pie_data_component_status = duckdb.sql("""
-        select condition as 状态, count(*) as 数量 from (
+        select condition as Status, count(*) as Count from (
             select sp.stack_id,sp.name,sp.enable,st.healthy,
             case
                 when sp.enable = 'true' and st.healthy = 'true' then 'normal'
@@ -100,11 +100,11 @@ def main_fragment():
     with col4:
         fig = px.pie(
             pie_data_component_status,
-            names='状态',
-            values='数量',
+            names='Status',
+            values='Count',
             title="Status of Components",
-            # hole=0.3,  # 设置中间洞的大小，形成环形图。去掉此参数即可显示传统饼图
-            # color_discrete_sequence=px.colors.qualitative.Set3  # 设置颜色序列
+            # hole=0.3,  
+            # color_discrete_sequence=px.colors.qualitative.Set3  # Set color sequence
         )
         st.plotly_chart(fig, config=config, use_container_width=True)
 

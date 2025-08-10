@@ -11,13 +11,13 @@ cache_ttl = 10
 
 def generate_basic_auth_header(username: str, password: str) -> dict:
    
-    # 1. 组合用户名和密码
+    # 1. Combine username and password
     credentials = f"{username}:{password}"
     
-    # 2. 进行 Base64 编码
-    credentials_bytes = credentials.encode('utf-8')  # 转换为字节
-    base64_bytes = base64.b64encode(credentials_bytes)  # Base64 编码
-    base64_credentials = base64_bytes.decode('utf-8')  # 转回字符串
+    # 2. Encode with Base64
+    credentials_bytes = credentials.encode('utf-8')  # Convert to bytes
+    base64_bytes = base64.b64encode(credentials_bytes)  # Base64 encoding
+    base64_credentials = base64_bytes.decode('utf-8')  # Convert back to string
     return base64_credentials
 
 def get_request_params():
